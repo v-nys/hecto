@@ -1,4 +1,3 @@
-
 #![warn(clippy::all)]
 mod editor;
 use editor::Editor;
