@@ -1,34 +1,25 @@
-use std::io::{self, stdout, Write}; // BIJHOUDEN: truukje self
+use std::io::{self, Write}; // BIJHOUDEN: truukje self
 use termion::event::Key;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
+
+use crate::terminal::Terminal;
 
 pub struct Editor {
     should_quit: bool,
+    terminal: Terminal,
 }
 
 fn die(e: std::io::Error) {
-    print!("{}", termion::clear::All);
+    Terminal::clear_screen();
     panic!("{}", e);
 }
 
-fn read_key() -> Result<Key, std::io::Error> {
-    loop {
-        /* dit lijkt me vreemd
-         * gebruiken Option (Some) omdat iterator ten einde kan zijn
-         * maar als dat gebeurt, komen we hiermee in oneindige lus
-         * al zou kunnen dat itereren over stdin ... keys nooit eindigt, dan is het geen probleem
-         */
-        if let Some(key) = io::stdin().lock().keys().next() {
-            return key;
-        }
-    }
-}
+
 
 impl Editor {
     pub fn default() -> Self {
         Self {
-            should_quit: false
+            should_quit: false,
+            terminal: Terminal::default().expect("Failed to initialize terminal."),
         }
     }
 
@@ -40,24 +31,32 @@ impl Editor {
             _ => (),
         }
         Ok(())*/
-        read_key().map(|pressed| {
-            match pressed {
-                Key::Ctrl('q') => self.should_quit = true,
-                _ => ()
-            }
+        Terminal::read_key().map(|pressed| match pressed {
+            Key::Ctrl('q') => self.should_quit = true,
+            _ => (),
         })
     }
 
     fn refresh_screen(&self) -> Result<(), std::io::Error> {
-        print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
+        Terminal::clear_screen();
+        Terminal::cursor_position(0, 0);
         if self.should_quit {
             println!("Goodbye.\r");
+        } else {
+            self.draw_rows();
+            Terminal::cursor_position(0, 0);
         }
         io::stdout().flush()
     }
 
+    fn draw_rows(&self) {
+        for _ in 0..self.terminal.size().height {
+            println!("~\r");
+        }
+    }
+
     pub fn run(&mut self) {
-        let _stdout = stdout().into_raw_mode().unwrap();
+        
 
         loop {
             if let Err(error) = self.refresh_screen() {
